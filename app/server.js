@@ -6,7 +6,7 @@ var docker = new Docker({socketPath: '/var/run/docker.sock'});
 var targetFile = '/prometheus-docker-sd/docker-targets.json';
 
 const fs = require('fs');
-logger.level = 'debug';
+logger.level = process.env.LOG_LEVEL || 'info';
 
 const ONLY_USE_IP = (process.env.ONLY_USE_IP === 'true');
 
@@ -24,21 +24,21 @@ function convertDockerJson2Prometheus(data){
   if("Labels" in data.Config) {
     if("prometheus-scrape.enabled" in data.Config.Labels) {
       if(data.Config.Labels["prometheus-scrape.enabled"] == "true") {
-        logger.info('');
-        logger.info('Container "' + containerName + '" is enabled for prometheus.');
+        logger.debug('');
+        logger.debug('Container "' + containerName + '" is enabled for prometheus.');
 
         if("prometheus-scrape.job_name" in data.Config.Labels) {
           container.labels["job"] = data.Config.Labels["prometheus-scrape.job_name"]; 
-          logger.info('Set job name to "' + container.labels["job"] + '".');
+          logger.debug('Set job name to "' + container.labels["job"] + '".');
         }
 
         var port = "9090";
 
         if("prometheus-scrape.port" in data.Config.Labels) {
           port = data.Config.Labels["prometheus-scrape.port"];
-          logger.info('Port is set to "' + port + '".');
+          logger.debug('Port is set to "' + port + '".');
         }else{
-          logger.info('Using default port "' + port + '".');
+          logger.debug('Using default port "' + port + '".');
         }
 
         var hostname = data.Config.Hostname;
@@ -50,11 +50,11 @@ function convertDockerJson2Prometheus(data){
         }
         var target = hostname + ':' + port;
         container.targets.push(target);
-        logger.info('Add scrape target "' + target + '".');
+        logger.debug('Add scrape target "' + target + '".');
 
         if("prometheus-scrape.scheme" in data.Config.Labels) {
           container.labels["__scheme__"] = data.Config.Labels["prometheus-scrape.scheme"]; 
-          logger.info('Set scheme to "' + container.labels["__scheme__"] + '".');
+          logger.debug('Set scheme to "' + container.labels["__scheme__"] + '".');
         }
 
         //if("prometheus-scrape.scrape_interval" in data.Config.Labels) {
@@ -64,23 +64,23 @@ function convertDockerJson2Prometheus(data){
 
         if("prometheus-scrape.metrics_path" in data.Config.Labels) {
           container.labels["__metrics_path__"] = data.Config.Labels["prometheus-scrape.metrics_path"];
-          logger.info('Set metrics path to "' + container.labels["__metrics_path__"] + '".');
+          logger.debug('Set metrics path to "' + container.labels["__metrics_path__"] + '".');
         }
 
         if("com.docker.compose.service" in data.Config.Labels) {
           container.labels["com_docker_compose_service"] = data.Config.Labels["com.docker.compose.service"];
-          logger.info('Set compose service name to "' + container.labels["com_docker_compose_service"] + '".');
+          logger.debug('Set compose service name to "' + container.labels["com_docker_compose_service"] + '".');
         }
 
-        logger.info('');
+        logger.debug('');
       }else{
-        logger.info('Container "' + containerName + '" has the "prometheus-scrape.enabled" label, but it isn\'t set to true, so ignoring it.');
+        logger.debug('Container "' + containerName + '" has the "prometheus-scrape.enabled" label, but it isn\'t set to true, so ignoring it.');
       }
     }else{
-      logger.info('Container "' + containerName +  '" has no "prometheus-scrape.enabled" label and is ignored.');
+      logger.debug('Container "' + containerName +  '" has no "prometheus-scrape.enabled" label and is ignored.');
     }
   }else{
-    logger.info('Container "' + containerName + '" has no labels and is ignored.');
+    logger.debug('Container "' + containerName + '" has no labels and is ignored.');
   }
 
   if(container.targets.length){
@@ -109,7 +109,7 @@ function loop() {
       });
 
       //console.log(promConfig);
-      logger.info('Write to file "' + targetFile + '".');
+      logger.debug('Write to file "' + targetFile + '".');
       fs.writeFileSync(targetFile, JSON.stringify(promConfig, null, 4));
     });
   });
